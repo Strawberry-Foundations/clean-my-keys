@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Clean My Keys
+Comment=Start Clean My Keys
+Exec=clean-my-keys
+Icon=/usr/share/pixmaps/clean-my-keys.png
+Terminal=false
+Categories=Utility;
+StartupNotify=true
