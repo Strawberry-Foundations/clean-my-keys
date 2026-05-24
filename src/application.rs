@@ -280,6 +280,19 @@ impl Application {
         .width(Fill)
         .height(Fill);
 
-        container(settings_panel).center(Fill).padding(8)
+        let version_text = text(format!("v{}", env!("CARGO_PKG_VERSION"))).size(12.0);
+
+        let stacked = stack![
+            container(settings_panel),
+            container(
+                container(version_text).padding(8.0)
+            )
+            .width(Fill)
+            .height(Fill)
+            .align_x(Alignment::End)
+            .align_y(Alignment::End),
+        ];
+
+        container(stacked).center(Fill).padding(8)
     }
 }
