@@ -8,6 +8,7 @@ pub const ICON_USB: &str = "\u{e1e0}";
 pub const ICON_SETTINGS: &str = "\u{e8b8}";
 pub const ICON_ARROW_BACK: &str = "\u{e5c4}";
 
+#[must_use] 
 pub fn load_fonts() -> Vec<std::borrow::Cow<'static, [u8]>> {
     vec![
         include_bytes!("../../assets/fonts/gsans_code.ttf")
@@ -29,6 +30,7 @@ pub const GSANSCODE_BOLD: Font = Font {
     style: font::Style::Normal,
 };
 
+#[must_use] 
 pub fn icon(codepoint: &str) -> Text<'static> {
     Text::new(codepoint.to_string()).font(Font {
         family: font::Family::Name("Material Symbols Rounded"),

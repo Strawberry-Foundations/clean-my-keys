@@ -11,6 +11,7 @@ pub fn config_directory() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from(".config"))
 }
 
+#[must_use] 
 pub fn load_theme_from_config() -> Theme {
     fs::read_to_string(theme_config_path())
         .ok()
@@ -32,6 +33,7 @@ pub fn save_theme_to_config(theme: &Theme) {
     }
 }
 
+#[must_use] 
 pub fn theme_config_path() -> PathBuf {
     config_directory().join("clean-my-keys").join("theme")
 }

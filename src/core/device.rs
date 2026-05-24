@@ -21,10 +21,13 @@ impl std::fmt::Display for InputDevice {
     }
 }
 
+#[must_use]
 pub fn has_device_access(path: &Path) -> bool {
     OpenOptions::new().read(true).open(path).is_ok()
 }
 
+/// Discovers keyboard-like input devices in `/dev/input`.
+#[must_use]
 pub fn discover_keyboards() -> Vec<InputDevice> {
     let mut keyboards = Vec::new();
 
@@ -32,12 +35,11 @@ pub fn discover_keyboards() -> Vec<InputDevice> {
         for entry in entries.flatten() {
             let path = entry.path();
 
-            if !path
-                .file_name()
-                .unwrap()
-                .to_string_lossy()
-                .starts_with("event")
-            {
+            let Some(file_name) = path.file_name() else {
+                continue;
+            };
+
+            if !file_name.to_string_lossy().starts_with("event") {
                 continue;
             }
 
@@ -73,6 +75,10 @@ pub fn discover_keyboards() -> Vec<InputDevice> {
     keyboards
 }
 
+/// Starts a background grab loop for the selected keyboard.
+///
+/// # Errors
+/// Returns an error if the device cannot be opened, configured, or grabbed.
 pub fn start_keyboard_lock(device_path: &Path, is_running: Arc<AtomicBool>) -> Result<(), String> {
     let mut device = Device::open(device_path)
         .map_err(|error| format!("Could not open device: {error}"))?;
