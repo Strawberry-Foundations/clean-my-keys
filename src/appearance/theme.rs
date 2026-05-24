@@ -16,14 +16,14 @@ struct ControlColors {
 
 fn mix(a: Color, b: Color, t: f32) -> Color {
     Color {
-        r: a.r + (b.r - a.r) * t,
-        g: a.g + (b.g - a.g) * t,
-        b: a.b + (b.b - a.b) * t,
-        a: a.a + (b.a - a.a) * t,
+        r: (b.r - a.r).mul_add(t, a.r),
+        g: (b.g - a.g).mul_add(t, a.g),
+        b: (b.b - a.b).mul_add(t, a.b),
+        a: (b.a - a.a).mul_add(t, a.a),
     }
 }
 
-fn with_alpha(color: Color, alpha: f32) -> Color {
+const fn with_alpha(color: Color, alpha: f32) -> Color {
     Color { a: alpha, ..color }
 }
 
@@ -83,7 +83,6 @@ pub fn pick_list_style(theme: &Theme, status: pick_list::Status) -> pick_list::S
             text_color: colors.text,
             placeholder_color: colors.text_muted,
             handle_color: colors.text,
-            ..pick_list::default(theme, status)
         },
         _ => pick_list::Style {
             border: Border {
@@ -95,7 +94,6 @@ pub fn pick_list_style(theme: &Theme, status: pick_list::Status) -> pick_list::S
             text_color: colors.text,
             placeholder_color: colors.text_muted,
             handle_color: colors.text,
-            ..pick_list::default(theme, status)
         },
     }
 }

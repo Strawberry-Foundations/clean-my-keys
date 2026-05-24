@@ -1,6 +1,5 @@
 use iced::widget::{Container, button, column, container, pick_list, row, stack, text};
 use iced::{Alignment, Fill, Font, Size, Theme};
-use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -9,15 +8,7 @@ use crate::core::device::start_keyboard_lock;
 use crate::appearance::fonts::{GSANSCODE_BOLD, ICON_ARROW_BACK, ICON_KEYBOARD, ICON_KEYBOARD_LOCK, ICON_MOP, ICON_SETTINGS, ICON_USB, icon, load_fonts};
 use crate::appearance::theme::{button_style, container_style, pick_list_style, window_icon};
 use crate::core::config::{load_theme_from_config, save_theme_to_config};
-
-fn user_in_input_group() -> bool {
-    if let Ok(output) = Command::new("id").arg("-nG").output()
-        && let Ok(s) = String::from_utf8(output.stdout) {
-            return s.split_whitespace().any(|g| g == "input");
-        }
-
-    false
-}
+use crate::core::permission::user_in_input_group;
 
 #[derive(Debug, Clone)]
 pub struct Application {
