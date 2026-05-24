@@ -78,12 +78,39 @@ pub fn start_keyboard_lock(device_path: &Path, is_running: Arc<AtomicBool>) -> R
         .map_err(|error| format!("Could not open device: {error}"))?;
 
     device
-        .grab()
-        .map_err(|error| format!("Could not lock keyboard: {error}"))?;
+        .set_nonblocking(true)
+        .map_err(|error| format!("Could not configure device: {error}"))?;
+
+    // If a previous lock has just been released, the kernel may still report EBUSY briefly.
+    let mut last_grab_error = None;
+    for _ in 0..10 {
+        match device.grab() {
+            Ok(()) => {
+                last_grab_error = None;
+                break;
+            }
+            Err(error) if error.raw_os_error() == Some(16) => {
+                last_grab_error = Some(error);
+                thread::sleep(Duration::from_millis(25));
+            }
+            Err(error) => {
+                return Err(format!("Could not lock keyboard: {error}"));
+            }
+        }
+    }
+
+    if let Some(error) = last_grab_error {
+        return Err(format!("Could not lock keyboard: {error}"));
+    }
 
     thread::spawn(move || {
         while is_running.load(Ordering::SeqCst) {
-            let _ = device.fetch_events();
+            if let Err(error) = device.fetch_events()
+                && error.kind() != std::io::ErrorKind::WouldBlock {
+                log(format!("Failed to read keyboard events: {error}"));
+                break;
+            }
+
             thread::sleep(Duration::from_millis(10));
         }
 
