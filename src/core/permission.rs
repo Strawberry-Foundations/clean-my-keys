@@ -1,6 +1,8 @@
+use crate::core::device::has_device_access;
 use std::error::Error;
+use std::fs;
+use std::path::PathBuf;
 use std::process::Command;
-use crate::core::device::{discover_keyboards, has_device_access};
 
 pub fn user_in_input_group() -> bool {
     if let Ok(output) = Command::new("id").arg("-nG").output()
@@ -11,22 +13,28 @@ pub fn user_in_input_group() -> bool {
     false
 }
 
-pub fn ensure_input_permissions() -> Result<(), Box<dyn Error>> {
-    let devices = discover_keyboards();
-    let has_real_device = devices
-        .iter()
-        .any(|device| !device.path.as_os_str().is_empty());
+fn accessible_input_devices() -> Vec<PathBuf> {
+    let mut devices = Vec::new();
 
-    if !has_real_device {
-        return Ok(());
+    if let Ok(entries) = fs::read_dir("/dev/input/") {
+        for entry in entries.flatten() {
+            let path = entry.path();
+
+            if path
+                .file_name()
+                .is_some_and(|name| name.to_string_lossy().starts_with("event"))
+                && has_device_access(&path)
+            {
+                devices.push(path);
+            }
+        }
     }
 
-    let has_accessible_device = devices
-        .iter()
-        .filter(|device| !device.path.as_os_str().is_empty())
-        .any(|device| has_device_access(&device.path));
+    devices
+}
 
-    if has_accessible_device {
+pub fn ensure_input_permissions() -> Result<(), Box<dyn Error>> {
+    if !accessible_input_devices().is_empty() {
         return Ok(());
     }
 
