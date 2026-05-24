@@ -9,16 +9,6 @@ mod fonts;
 mod theme;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let _running_as = karen::builder()
-        .wrapper("pkexec")
-        .with_env(&[
-            "DISPLAY",
-            "WAYLAND_",
-            "XAUTHORITY",
-            "DBUS_SESSION_BUS_ADDRESS",
-            "XDG_RUNTIME_DIR",
-        ])?;
-
     iced::application(Application::default, Application::update, Application::view)
         .settings(Application::default_settings())
         .theme(|application: &Application| application.theme.clone())

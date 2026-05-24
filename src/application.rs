@@ -8,6 +8,23 @@ use iced::widget::{Container, button, column, container, pick_list, row, text};
 use iced::{Alignment, Fill, Font, Size, Theme};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::path::Path;
+use std::process::Command;
+use std::fs::OpenOptions;
+
+fn has_device_access(path: &Path) -> bool {
+    OpenOptions::new().read(true).open(path).is_ok()
+}
+
+fn user_in_input_group() -> bool {
+    if let Ok(output) = Command::new("id").arg("-nG").output() {
+        if let Ok(s) = String::from_utf8(output.stdout) {
+            return s.split_whitespace().any(|g| g == "input");
+        }
+    }
+
+    false
+}
 
 #[derive(Debug, Clone)]
 pub struct Application {
@@ -68,18 +85,40 @@ impl Application {
                         return;
                     }
 
-                    self.cleaning_signal.store(true, Ordering::SeqCst);
+                    if has_device_access(&input_device.path) {
+                        self.cleaning_signal.store(true, Ordering::SeqCst);
 
-                    match start_keyboard_lock(
-                        input_device.path.clone(),
-                        Arc::clone(&self.cleaning_signal),
-                    ) {
-                        Ok(()) => {
-                            self.cleaning_enabled = true;
+                        match start_keyboard_lock(
+                            input_device.path.clone(),
+                            Arc::clone(&self.cleaning_signal),
+                        ) {
+                            Ok(()) => {
+                                self.cleaning_enabled = true;
+                            }
+                            Err(error) => {
+                                self.cleaning_signal.store(false, Ordering::SeqCst);
+                                eprintln!("{error}");
+                            }
                         }
-                        Err(error) => {
-                            self.cleaning_signal.store(false, Ordering::SeqCst);
-                            eprintln!("{error}");
+                    } else {
+                        if user_in_input_group() {
+                            eprintln!(
+                                "User is in group 'input' but cannot open device. Check device permissions, re-login, or udev rules."
+                            );
+                        } else {
+                            match karen::builder()
+                                .wrapper("pkexec")
+                                .with_env(&[
+                                    "DISPLAY",
+                                    "WAYLAND_",
+                                    "XAUTHORITY",
+                                    "DBUS_SESSION_BUS_ADDRESS",
+                                    "XDG_RUNTIME_DIR",
+                                ])
+                            {
+                                Ok(_running_as) => {}
+                                Err(err) => eprintln!("Failed to escalate privileges: {err}"),
+                            }
                         }
                     }
                 }
