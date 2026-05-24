@@ -1,12 +1,12 @@
 use iced::widget::{Container, button, column, container, pick_list, row, stack, text};
-use iced::{Alignment, Fill, Font, Size, Task, Theme};
+use iced::{color, Alignment, Fill, Font, Size, Task, Theme};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use crate::core::device::{InputDevice, discover_keyboards, has_device_access};
 use crate::core::device::start_keyboard_lock;
 use crate::appearance::fonts::{GSANSCODE_BOLD, ICON_ARROW_BACK, ICON_KEYBOARD, ICON_KEYBOARD_LOCK, ICON_MOP, ICON_SETTINGS, ICON_USB, icon, load_fonts};
-use crate::appearance::theme::{button_style, container_style, pick_list_style, window_icon};
+use crate::appearance::theme::{action_button_style, button_style, container_style, pick_list_style, window_icon};
 use crate::core::config::{load_theme_from_config, save_theme_to_config};
 use crate::core::logging::log;
 use crate::core::permission::user_in_input_group;
@@ -59,14 +59,13 @@ impl Application {
     #[must_use]
     pub fn default_window() -> iced::window::Settings {
         iced::window::Settings {
-            size: Size::new(600f32, 350f32),
+            size: Size::new(600f32, 325f32),
             resizable: false,
             icon: window_icon(),
             ..Default::default()
         }
     }
 
-    #[must_use]
     pub fn subscription(&self) -> iced::Subscription<Message> {
         iced::keyboard::listen().map(Message::KeyboardEvent)
     }
@@ -152,8 +151,7 @@ impl Application {
                 modifiers.control()
                     && matches!(
                         key.as_ref(),
-                        iced::keyboard::Key::Character("q")
-                            | iced::keyboard::Key::Character("Q")
+                        iced::keyboard::Key::Character("q" | "Q")
                     )
             }
             _ => false,
@@ -191,7 +189,7 @@ impl Application {
         let input_devices = discover_keyboards();
 
         let description = if self.cleaning_enabled {
-            "Keyboard input is temporarily disabled. You can now safely clean your keys without triggering unwanted commands."
+            "Keyboard input is now disabled. You can now safely clean your keys without triggering unwanted commands."
         } else {
             "Lock your keys for a quick wipe. Press the button to pause all keyboard inputs safely"
         };
@@ -202,8 +200,16 @@ impl Application {
             ICON_KEYBOARD
         };
 
+        let icon_color = if self.cleaning_enabled {
+            color!(0x0000_c85b)
+        } else {
+            color!(0x00f7_9c3b)
+        };
+
         let description_container = container(
-            row![icon(keyboard_icon).size(32.0), text(description).size(14.0)]
+            row![
+                icon(keyboard_icon).size(32.0).color(icon_color), text(description).size(14.0)
+            ]
                 .spacing(8.0)
                 .align_y(Alignment::Center),
         )
@@ -213,9 +219,9 @@ impl Application {
         .max_width(550);
 
         let content = column![
-            icon(ICON_MOP).size(48.0),
+            icon(ICON_MOP).size(56.0),
 
-            text("Clean My Keys").size(28.0).font(GSANSCODE_BOLD),
+            text("Clean My Keys").size(32.0).font(GSANSCODE_BOLD),
 
             description_container,
 
@@ -234,13 +240,22 @@ impl Application {
             .align_y(Alignment::Center)
             .spacing(16.0),
 
-            if self.input_device.as_ref().is_some_and(|device| !device.path.as_os_str().is_empty()) {
-                button(if self.cleaning_enabled { "Stop" } else { "Start" })
-                    .on_press(Message::ToggleCleaning)
-                    .style(button_style)
-            } else {
-                button(if self.cleaning_enabled { "Stop" } else { "Start" })
-                    .style(button_style)
+            {
+                let button_label = if self.cleaning_enabled { "Stop" } else { "Start" };
+                let action_button = button(
+                    container(text(button_label).size(16.0))
+                        .width(Fill)
+                        .center_x(Fill),
+                )
+                .width(125.0)
+                .padding([9.0, 0.0])
+                .style(move |theme, status| action_button_style(theme, status, self.cleaning_enabled));
+
+                if self.input_device.as_ref().is_some_and(|device| !device.path.as_os_str().is_empty()) {
+                    action_button.on_press(Message::ToggleCleaning)
+                } else {
+                    action_button
+                }
             }
         ]
         .align_x(Alignment::Center)

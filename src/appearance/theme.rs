@@ -54,6 +54,7 @@ fn control_colors(theme: &Theme) -> ControlColors {
     }
 }
 
+#[must_use] 
 pub fn border_style() -> Border {
     Border {
         color: color!(0x0053_4f58),
@@ -62,6 +63,7 @@ pub fn border_style() -> Border {
     }
 }
 
+#[must_use] 
 pub fn container_style() -> container::Style {
     container::Style {
         border: border_style(),
@@ -69,6 +71,7 @@ pub fn container_style() -> container::Style {
     }
 }
 
+#[must_use] 
 pub fn pick_list_style(theme: &Theme, status: pick_list::Status) -> pick_list::Style {
     let colors = control_colors(theme);
 
@@ -98,6 +101,7 @@ pub fn pick_list_style(theme: &Theme, status: pick_list::Status) -> pick_list::S
     }
 }
 
+#[must_use] 
 pub fn button_style(theme: &Theme, status: button::Status) -> button::Style {
     let colors = control_colors(theme);
     let mut style = button::primary(theme, status);
@@ -130,6 +134,71 @@ pub fn button_style(theme: &Theme, status: button::Status) -> button::Style {
     style
 }
 
+#[must_use] 
+pub fn action_button_style(
+    theme: &Theme,
+    status: button::Status,
+    active: bool,
+) -> button::Style {
+    let colors = control_colors(theme);
+    let mut style = button::primary(theme, status);
+    let inactive_border = with_alpha(
+        mix(colors.surface_bg, color!(0x0000_c85b), 0.10),
+        0.92,
+    );
+
+    style.border = Border {
+        color: colors.surface_border,
+        width: 1.0,
+        radius: THEME_CORNER_RADIUS.into(),
+    };
+
+    if active {
+        style.background = Some(iced::Background::Color(with_alpha(mix(colors.surface_bg, color!(0x00f7_9c3b), 0.18), 1.0)));
+    } else {
+        style.background = Some(iced::Background::Color(with_alpha(mix(colors.surface_bg, color!(0x0000_c85b), 0.22), 1.0)));
+        style.border.color = inactive_border;
+    }
+
+    style.text_color = colors.text;
+
+    match status {
+        button::Status::Hovered => {
+            style.border.color = if active {
+                colors.surface_border_hover
+            } else {
+                with_alpha(mix(colors.surface_bg, color!(0x0000_c85b), 0.16), 0.96)
+            };
+            style.background = Some(iced::Background::Color(if active {
+                with_alpha(mix(colors.surface_hover_bg, color!(0x00f7_9c3b), 0.22), 1.0)
+            } else {
+                with_alpha(mix(colors.surface_hover_bg, color!(0x0000_c85b), 0.26), 1.0)
+            }));
+        }
+        button::Status::Pressed => {
+            style.border.color = if active {
+                colors.surface_border_hover
+            } else {
+                with_alpha(mix(colors.surface_bg, color!(0x0000_c85b), 0.20), 1.0)
+            };
+            style.background = Some(iced::Background::Color(if active {
+                with_alpha(mix(colors.surface_pressed_bg, color!(0x00f7_9c3b), 0.26), 1.0)
+            } else {
+                with_alpha(mix(colors.surface_pressed_bg, color!(0x0000_c85b), 0.30), 1.0)
+            }));
+        }
+        button::Status::Disabled => {
+            style.border.color = with_alpha(colors.surface_border, 0.35);
+            style.background = Some(iced::Background::Color(with_alpha(colors.surface_bg, 0.45)));
+            style.text_color = with_alpha(colors.text_muted, 0.55);
+        }
+        button::Status::Active => {}
+    }
+
+    style
+}
+
+#[must_use]
 pub fn theme_from_name(name: &str) -> Option<Theme> {
     Theme::ALL
         .iter()
@@ -137,10 +206,11 @@ pub fn theme_from_name(name: &str) -> Option<Theme> {
         .cloned()
 }
 
+/// Loads the window icon from the bundled assets.
+#[must_use]
 pub fn window_icon() -> Option<iced::window::Icon> {
     let bytes = include_bytes!("../../assets/image/icon.png");
-    let dyn_img = image::load_from_memory(bytes)
-        .expect("failed to load icon image from assets");
+    let dyn_img = image::load_from_memory(bytes).ok()?;
     let rgba = dyn_img.to_rgba8();
     let (w, h) = rgba.dimensions();
     iced::window::icon::from_rgba(rgba.into_raw(), w, h).ok()
