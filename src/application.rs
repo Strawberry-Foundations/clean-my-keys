@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::path::Path;
 use std::process::Command;
 use std::fs::OpenOptions;
+// use iced::window::Icon; // not needed; build icon via iced::window::icon::from_rgba
 
 fn has_device_access(path: &Path) -> bool {
     OpenOptions::new().read(true).open(path).is_ok()
@@ -64,11 +65,21 @@ impl Application {
 
     #[must_use]
     pub fn default_window() -> iced::window::Settings {
-        iced::window::Settings {
-            size: Size::new(600f32, 350f32),
-            resizable: false,
-            ..Default::default()
-        }
+            let icon = {
+                let bytes = include_bytes!("../assets/image/icon.png");
+                let dyn_img = image::load_from_memory(bytes)
+                    .expect("failed to load icon image from assets");
+                let rgba = dyn_img.to_rgba8();
+                let (w, h) = rgba.dimensions();
+                iced::window::icon::from_rgba(rgba.into_raw(), w, h).ok()
+            };
+
+            iced::window::Settings {
+                size: Size::new(600f32, 350f32),
+                resizable: false,
+                icon,
+                ..Default::default()
+            }
     }
 
     /// # Panics
