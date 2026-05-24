@@ -15,7 +15,7 @@ pub struct InputDevice {
 
 impl std::fmt::Display for InputDevice {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.name)
+        write!(f, "{} ({})", self.name, self.path.display())
     }
 }
 
@@ -26,19 +26,34 @@ pub fn discover_keyboards() -> Vec<InputDevice> {
         for entry in entries.flatten() {
             let path = entry.path();
 
-            if path
+            if !path
                 .file_name()
                 .unwrap()
                 .to_string_lossy()
                 .starts_with("event")
-                && let Ok(device) = Device::open(&path)
-                    && device
-                        .supported_keys()
-                        .is_some_and(|keys| keys.contains(KeyCode::KEY_A))
-                    {
-                        let name = device.name().unwrap_or("Unknown keyboard").to_string();
-                        keyboards.push(InputDevice { name, path });
+            {
+                continue;
+            }
+
+            match Device::open(&path) {
+                Ok(device) => {
+                    match device.supported_keys() {
+                        Some(keys) if keys.contains(KeyCode::KEY_A) => {
+                            let name = device.name().unwrap_or("Unknown keyboard").to_string();
+                            keyboards.push(InputDevice { name, path });
+                        }
+                        Some(_) => {
+                            eprintln!("Skipping {}: supported keys don't indicate a keyboard", path.display());
+                        }
+                        None => {
+                            eprintln!("Skipping {}: device has no supported_keys()", path.display());
+                        }
                     }
+                }
+                Err(err) => {
+                    eprintln!("Failed to open {}: {err}", path.display());
+                }
+            }
         }
     }
 
