@@ -6,6 +6,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
+use crate::core::logging::log;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 
@@ -48,15 +49,15 @@ pub fn discover_keyboards() -> Vec<InputDevice> {
                             keyboards.push(InputDevice { name, path });
                         }
                         Some(_) => {
-                            eprintln!("Skipping {}: supported keys don't indicate a keyboard", path.display());
+                            log(format!("Skipping {}: supported keys don't indicate a keyboard", path.display()));
                         }
                         None => {
-                            eprintln!("Skipping {}: device has no supported_keys()", path.display());
+                            log(format!("Skipping {}: device has no supported_keys()", path.display()));
                         }
                     }
                 }
                 Err(err) => {
-                    eprintln!("Failed to open {}: {err}", path.display());
+                    log(format!("Failed to open {}: {err}", path.display()));
                 }
             }
         }

@@ -2,6 +2,7 @@ use std::{env, fs};
 use std::path::PathBuf;
 use iced::Theme;
 use crate::appearance::theme::{theme_from_name};
+use crate::core::logging::log;
 
 pub fn config_directory() -> PathBuf {
     env::var_os("XDG_CONFIG_HOME")
@@ -22,12 +23,12 @@ pub fn save_theme_to_config(theme: &Theme) {
 
     if let Some(parent) = theme_path.parent()
         && let Err(error) = fs::create_dir_all(parent) {
-        eprintln!("Failed to create config directory: {error}");
+        log(format!("Failed to create config directory: {error}"));
         return;
     }
 
     if let Err(error) = fs::write(&theme_path, theme.to_string()) {
-        eprintln!("Failed to save theme: {error}");
+        log(format!("Failed to save theme: {error}"));
     }
 }
 

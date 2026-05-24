@@ -1,5 +1,5 @@
 use iced::widget::{Container, button, column, container, pick_list, row, stack, text};
-use iced::{Alignment, Fill, Font, Size, Theme};
+use iced::{Alignment, Fill, Font, Size, Task, Theme};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -8,6 +8,7 @@ use crate::core::device::start_keyboard_lock;
 use crate::appearance::fonts::{GSANSCODE_BOLD, ICON_ARROW_BACK, ICON_KEYBOARD, ICON_KEYBOARD_LOCK, ICON_MOP, ICON_SETTINGS, ICON_USB, icon, load_fonts};
 use crate::appearance::theme::{button_style, container_style, pick_list_style, window_icon};
 use crate::core::config::{load_theme_from_config, save_theme_to_config};
+use crate::core::logging::log;
 use crate::core::permission::user_in_input_group;
 
 #[derive(Debug, Clone)]
@@ -25,6 +26,7 @@ pub enum Message {
     ToggleCleaning,
     ChangeInputDevice(InputDevice),
     ChangeTheme(Theme),
+    KeyboardEvent(iced::keyboard::Event),
 }
 
 impl Default for Application {
@@ -64,12 +66,18 @@ impl Application {
         }
     }
 
+    #[must_use]
+    pub fn subscription(&self) -> iced::Subscription<Message> {
+        iced::keyboard::listen().map(Message::KeyboardEvent)
+    }
+
     /// # Panics
     /// Panics if panics
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::ToggleSettings => {
                 self.settings_mode = !self.settings_mode;
+                Task::none()
             }
             Message::ToggleCleaning => {
                 if self.cleaning_enabled {
@@ -77,7 +85,7 @@ impl Application {
                     self.cleaning_enabled = false;
                 } else if let Some(input_device) = self.input_device.clone() {
                     if input_device.path.as_os_str().is_empty() {
-                        return;
+                        return Task::none();
                     }
 
                     if has_device_access(&input_device.path) {
@@ -92,13 +100,11 @@ impl Application {
                             }
                             Err(error) => {
                                 self.cleaning_signal.store(false, Ordering::SeqCst);
-                                eprintln!("{error}");
+                                log(error);
                             }
                         }
                     } else if user_in_input_group() {
-                        eprintln!(
-                            "User is in group 'input' but cannot open device. Check device permissions, re-login, or udev rules."
-                        );
+                        log("User is in group 'input' but cannot open device. Check device permissions, re-login, or udev rules.");
                     } else {
                         match karen::builder()
                             .wrapper("pkexec")
@@ -111,20 +117,46 @@ impl Application {
                             ])
                         {
                             Ok(_running_as) => {}
-                            Err(err) => eprintln!("Failed to escalate privileges: {err}"),
+                            Err(err) => log(format!("Failed to escalate privileges: {err}")),
                         }
                     }
                 }
+                Task::none()
             }
             Message::ChangeInputDevice(input_device) => {
                 if !self.cleaning_enabled {
                     self.input_device = Some(input_device);
                 }
+
+                Task::none()
             }
             Message::ChangeTheme(theme) => {
                 self.theme = theme;
                 save_theme_to_config(&self.theme);
+
+                Task::none()
             }
+            Message::KeyboardEvent(event) => {
+                if Self::is_quit_shortcut(&event) {
+                    iced::exit()
+                } else {
+                    Task::none()
+                }
+            }
+        }
+    }
+
+    fn is_quit_shortcut(event: &iced::keyboard::Event) -> bool {
+        match event {
+            iced::keyboard::Event::KeyPressed { key, modifiers, .. } => {
+                modifiers.control()
+                    && matches!(
+                        key.as_ref(),
+                        iced::keyboard::Key::Character("q")
+                            | iced::keyboard::Key::Character("Q")
+                    )
+            }
+            _ => false,
         }
     }
 
