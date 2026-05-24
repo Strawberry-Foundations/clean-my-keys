@@ -15,7 +15,7 @@ pub struct InputDevice {
 
 impl std::fmt::Display for InputDevice {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} ({})", self.name, self.path.display())
+        write!(f, "{}", self.name)
     }
 }
 
