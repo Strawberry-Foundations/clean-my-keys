@@ -1,7 +1,6 @@
 #![warn(clippy::all, clippy::nursery, clippy::pedantic)]
 
 use std::error::Error;
-
 use crate::application::Application;
 use crate::core::permission::ensure_input_permissions;
 use crate::core::logging::set_verbose;
@@ -12,8 +11,8 @@ pub mod appearance;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let verbose = std::env::args().any(|argument| argument == "-v" || argument == "--verbose");
+    
     set_verbose(verbose);
-
     ensure_input_permissions()?;
 
     iced::application(Application::default, Application::update, Application::view)

@@ -23,7 +23,7 @@ pub fn load_fonts() -> Vec<std::borrow::Cow<'static, [u8]>> {
     ]
 }
 
-pub const GSANSCODE_BOLD: Font = Font {
+pub const GOOGLESANSCODE_BOLD: Font = Font {
     family: font::Family::Name("Google Sans Code"),
     weight: font::Weight::Bold,
     stretch: font::Stretch::Normal,
