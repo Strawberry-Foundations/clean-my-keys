@@ -18,10 +18,26 @@ Under the hood, KeyClean leverages the Linux kernel's **`evdev`** subsystem. Whe
 
 ## 📦 Installation & Prerequisites
 
-Since Linux locks down raw device inputs for security purposes to prevent keyloggers, you need appropriate permissions to interact with `/dev/input/`.
+The app will try to elevate itself with `pkexec` on start if it does not have access to `/dev/input/`. If your system blocks that, you can still grant access manually via the `input` group.
 
-### 1. Add your user to the `input` group:
-To run the app without typing `sudo` every time, add your user to the input group and **log out and back in** (or restart):
+### Option 1: Build from source
+
+Then clone and build the project:
 ```bash
-sudo usermod -aG input $USER
+git clone https://github.com/<your-user>/clean-my-keys.git
+cd clean-my-keys
+cargo build --release
 ```
+
+Run the binary from `target/release/clean-my-keys`.
+
+### Option 2: Install from AUR
+
+https://aur.archlinux.org/packages/clean-my-keys
+
+If you prefer an AUR package, install it with your AUR helper once a package is available:
+```bash
+yay -S clean-my-keys
+```
+
+If you do not use an AUR helper, you can also build the package manually with `makepkg -si` from the AUR PKGBUILD directory.
