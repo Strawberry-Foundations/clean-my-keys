@@ -5,16 +5,18 @@ pub const ICON_KEYBOARD: &str = "\u{e312}";
 pub const ICON_KEYBOARD_LOCK: &str = "\u{f492}";
 pub const ICON_MOP: &str = "\u{e28d}";
 pub const ICON_USB: &str = "\u{e1e0}";
+pub const ICON_SETTINGS: &str = "\u{e8b8}";
+pub const ICON_ARROW_BACK: &str = "\u{e5c4}";
 
 pub fn load_fonts() -> Vec<std::borrow::Cow<'static, [u8]>> {
     vec![
-        include_bytes!("../assets/fonts/gsans_code.ttf")
+        include_bytes!("../../assets/fonts/gsans_code.ttf")
             .as_slice()
             .into(),
-        include_bytes!("../assets/fonts/gsans_code_bold.ttf")
+        include_bytes!("../../assets/fonts/gsans_code_bold.ttf")
             .as_slice()
             .into(),
-        include_bytes!("../assets/fonts/material_symbols_rounded.ttf")
+        include_bytes!("../../assets/fonts/material_symbols_rounded.ttf")
             .as_slice()
             .into(),
     ]

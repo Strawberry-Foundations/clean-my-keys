@@ -1,21 +1,14 @@
-use crate::devices::{InputDevice, discover_keyboards};
-use crate::devices::start_keyboard_lock;
-use crate::fonts::{
-    GSANSCODE_BOLD, ICON_KEYBOARD, ICON_KEYBOARD_LOCK, ICON_MOP, ICON_USB, icon, load_fonts,
-};
-use crate::theme::{button_style, container_style, pick_list_style};
-use iced::widget::{Container, button, column, container, pick_list, row, text};
+use iced::widget::{Container, button, column, container, pick_list, row, stack, text};
 use iced::{Alignment, Fill, Font, Size, Theme};
+use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use std::path::Path;
-use std::process::Command;
-use std::fs::OpenOptions;
-// use iced::window::Icon; // not needed; build icon via iced::window::icon::from_rgba
 
-fn has_device_access(path: &Path) -> bool {
-    OpenOptions::new().read(true).open(path).is_ok()
-}
+use crate::core::device::{InputDevice, discover_keyboards, has_device_access};
+use crate::core::device::start_keyboard_lock;
+use crate::appearance::fonts::{GSANSCODE_BOLD, ICON_ARROW_BACK, ICON_KEYBOARD, ICON_KEYBOARD_LOCK, ICON_MOP, ICON_SETTINGS, ICON_USB, icon, load_fonts};
+use crate::appearance::theme::{button_style, container_style, pick_list_style, window_icon};
+use crate::core::config::{load_theme_from_config, save_theme_to_config};
 
 fn user_in_input_group() -> bool {
     if let Ok(output) = Command::new("id").arg("-nG").output()
@@ -32,10 +25,12 @@ pub struct Application {
     pub input_device: Option<InputDevice>,
     pub cleaning_signal: Arc<AtomicBool>,
     pub theme: Theme,
+    pub settings_mode: bool,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
+    ToggleSettings,
     ToggleCleaning,
     ChangeInputDevice(InputDevice),
     ChangeTheme(Theme),
@@ -43,16 +38,21 @@ pub enum Message {
 
 impl Default for Application {
     fn default() -> Self {
-        Self {
-            cleaning_enabled: false,
-            input_device: None,
-            cleaning_signal: Arc::new(AtomicBool::new(false)),
-            theme: Theme::Ferra,
-        }
+        Self::new(false)
     }
 }
 
 impl Application {
+    #[must_use]
+    pub fn new(settings_mode: bool) -> Self {
+        Self {
+            cleaning_enabled: false,
+            input_device: None,
+            cleaning_signal: Arc::new(AtomicBool::new(false)),
+            theme: load_theme_from_config(),
+            settings_mode,
+        }
+    }
     #[must_use]
     pub fn default_settings() -> iced::Settings {
         iced::Settings {
@@ -65,27 +65,21 @@ impl Application {
 
     #[must_use]
     pub fn default_window() -> iced::window::Settings {
-            let icon = {
-                let bytes = include_bytes!("../assets/image/icon.png");
-                let dyn_img = image::load_from_memory(bytes)
-                    .expect("failed to load icon image from assets");
-                let rgba = dyn_img.to_rgba8();
-                let (w, h) = rgba.dimensions();
-                iced::window::icon::from_rgba(rgba.into_raw(), w, h).ok()
-            };
-
-            iced::window::Settings {
-                size: Size::new(600f32, 350f32),
-                resizable: false,
-                icon,
-                ..Default::default()
-            }
+        iced::window::Settings {
+            size: Size::new(600f32, 350f32),
+            resizable: false,
+            icon: window_icon(),
+            ..Default::default()
+        }
     }
 
     /// # Panics
     /// Panics if panics
     pub fn update(&mut self, message: Message) {
         match message {
+            Message::ToggleSettings => {
+                self.settings_mode = !self.settings_mode;
+            }
             Message::ToggleCleaning => {
                 if self.cleaning_enabled {
                     self.cleaning_signal.store(false, Ordering::SeqCst);
@@ -138,6 +132,7 @@ impl Application {
             }
             Message::ChangeTheme(theme) => {
                 self.theme = theme;
+                save_theme_to_config(&self.theme);
             }
         }
     }
@@ -145,6 +140,31 @@ impl Application {
     /// # Panics
     /// Panics if panics
     pub fn view(&'_ self) -> Container<'_, Message> {
+        let header_icon = if self.settings_mode {
+            ICON_ARROW_BACK
+        } else {
+            ICON_SETTINGS
+        };
+
+        let header = container(
+            button(icon(header_icon))
+                .on_press(Message::ToggleSettings)
+                .style(button_style),
+        )
+        .width(Fill)
+        .padding(16.0)
+        .align_x(Alignment::End);
+
+        let content = if self.settings_mode {
+            self.view_settings()
+        } else {
+            self.view_main()
+        };
+
+        container(stack![container(content).center(Fill), header]).center(Fill)
+    }
+
+    fn view_main(&'_ self) -> Container<'_, Message> {
         let input_devices = discover_keyboards();
 
         let description = if self.cleaning_enabled {
@@ -169,38 +189,62 @@ impl Application {
         .width(550)
         .max_width(550);
 
-        container(
-            column![
-                pick_list(Theme::ALL, Some(self.theme.clone()), Message::ChangeTheme).style(pick_list_style),
+        let content = column![
+            icon(ICON_MOP).size(48.0),
 
-                icon(ICON_MOP).size(48.0),
-                text("Clean My Keys").size(28.0).font(GSANSCODE_BOLD),
-                description_container,
+            text("Clean My Keys").size(28.0).font(GSANSCODE_BOLD),
 
-                row![
-                    row![icon(ICON_USB), text("Input Device")]
-                        .align_y(Alignment::Center)
-                        .spacing(4.0),
-                    pick_list(
-                        input_devices,
-                        self.input_device.as_ref(),
-                        Message::ChangeInputDevice
-                    )
-                    .style(pick_list_style)
-                ].align_y(Alignment::Center).spacing(16.0),
+            description_container,
 
-                if self.input_device.as_ref().is_some_and(|device| !device.path.as_os_str().is_empty()) {
-                    button(if self.cleaning_enabled { "Stop" } else { "Start" })
-                        .on_press(Message::ToggleCleaning)
-                        .style(button_style)
-                } else {
-                    button(if self.cleaning_enabled { "Stop" } else { "Start" })
-                        .style(button_style)
-                }
+            row![
+                row![icon(ICON_USB), text("Input Device")]
+                    .align_y(Alignment::Center)
+                    .spacing(4.0),
+                pick_list(
+                    input_devices,
+                    self.input_device.as_ref(),
+                    Message::ChangeInputDevice
+                )
+                .placeholder("None")
+                .style(pick_list_style)
             ]
-            .align_x(Alignment::Center)
-            .spacing(12.0),
+            .align_y(Alignment::Center)
+            .spacing(16.0),
+
+            if self.input_device.as_ref().is_some_and(|device| !device.path.as_os_str().is_empty()) {
+                button(if self.cleaning_enabled { "Stop" } else { "Start" })
+                    .on_press(Message::ToggleCleaning)
+                    .style(button_style)
+            } else {
+                button(if self.cleaning_enabled { "Stop" } else { "Start" })
+                    .style(button_style)
+            }
+        ]
+        .align_x(Alignment::Center)
+        .spacing(12.0);
+
+        container(content)
+    }
+
+    fn view_settings(&'_ self) -> Container<'_, Message> {
+        let settings_panel = container(
+            column![
+                row![
+                    icon(ICON_SETTINGS).size(24.0),
+                    text("Settings").size(24.0).font(GSANSCODE_BOLD)
+                ].spacing(8.0),
+                text("Theme").size(14.0),
+                pick_list(Theme::ALL, Some(self.theme.clone()), Message::ChangeTheme)
+                    .style(pick_list_style)
+                    .width(220.0),
+            ]
+            .spacing(10.0)
+            .align_x(Alignment::Start),
         )
-        .center(Fill)
+        .style(|_| container_style())
+        .padding(16.0)
+        .width(320.0);
+
+        container(settings_panel).center(Fill)
     }
 }

@@ -1,5 +1,6 @@
 use evdev::{Device, KeyCode};
 use std::fs;
+use std::fs::OpenOptions;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -17,6 +18,10 @@ impl std::fmt::Display for InputDevice {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name)
     }
+}
+
+pub fn has_device_access(path: &Path) -> bool {
+    OpenOptions::new().read(true).open(path).is_ok()
 }
 
 pub fn discover_keyboards() -> Vec<InputDevice> {
