@@ -17,7 +17,7 @@ A sleek, minimalist utility, built entirely in **Rust** using the **Iced** GUI f
 
 ## 🚀 How It Works (The Tech Stack)
 
-Under the hood, KeyClean leverages the Linux kernel's **`evdev`** subsystem. When you press "Start Cleaning", the app triggers an exclusive `grab()` on the selected device file (found under `/dev/input/event*`). This tells the kernel to route all keystrokes exclusively to KeyClean (where they are swallowed safely) until you hit stop. Your mouse remains entirely free so you can interact with the UI at any time.
+Under the hood, KeyClean leverages the Linux kernel's **`evdev`** subsystem. When you press "Start", the app triggers an exclusive `grab()` on the selected device file (found under `/dev/input/event*`). This tells the kernel to route all keystrokes exclusively to KeyClean (where they are swallowed safely) until you hit stop. Your mouse remains entirely free (unless you've selected your mouse from the dropdown menu - yes, you can do that!) so you can interact with the UI at any time.
 
 ## 📦 Installation & Prerequisites
 
