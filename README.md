@@ -4,9 +4,6 @@
 
 A sleek, minimalist utility, built entirely in **Rust** using the **Iced** GUI framework. It allows you to temporarily disable and lock your keyboard with a single click so you can safely wipe it down without triggering unwanted commands or chaotic inputs.
 
-<p align="center">
-  </p>
-
 ## ✨ Features
 
 - **One-Click Lock:** Instantly intercept and safely block all keyboard inputs.
