@@ -1,6 +1,6 @@
 use evdev::{Device, KeyCode};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
@@ -31,17 +31,14 @@ pub fn discover_keyboards() -> Vec<InputDevice> {
                 .unwrap()
                 .to_string_lossy()
                 .starts_with("event")
-            {
-                if let Ok(device) = Device::open(&path) {
-                    if device
+                && let Ok(device) = Device::open(&path)
+                    && device
                         .supported_keys()
-                        .map_or(false, |keys| keys.contains(KeyCode::KEY_A))
+                        .is_some_and(|keys| keys.contains(KeyCode::KEY_A))
                     {
                         let name = device.name().unwrap_or("Unknown keyboard").to_string();
                         keyboards.push(InputDevice { name, path });
                     }
-                }
-            }
         }
     }
 
@@ -55,8 +52,8 @@ pub fn discover_keyboards() -> Vec<InputDevice> {
     keyboards
 }
 
-pub fn start_keyboard_lock(device_path: PathBuf, is_running: Arc<AtomicBool>) -> Result<(), String> {
-    let mut device = Device::open(&device_path)
+pub fn start_keyboard_lock(device_path: &Path, is_running: Arc<AtomicBool>) -> Result<(), String> {
+    let mut device = Device::open(device_path)
         .map_err(|error| format!("Could not open device: {error}"))?;
 
     device

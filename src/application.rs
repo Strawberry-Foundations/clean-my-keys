@@ -17,11 +17,10 @@ fn has_device_access(path: &Path) -> bool {
 }
 
 fn user_in_input_group() -> bool {
-    if let Ok(output) = Command::new("id").arg("-nG").output() {
-        if let Ok(s) = String::from_utf8(output.stdout) {
+    if let Ok(output) = Command::new("id").arg("-nG").output()
+        && let Ok(s) = String::from_utf8(output.stdout) {
             return s.split_whitespace().any(|g| g == "input");
         }
-    }
 
     false
 }
@@ -89,7 +88,7 @@ impl Application {
                         self.cleaning_signal.store(true, Ordering::SeqCst);
 
                         match start_keyboard_lock(
-                            input_device.path.clone(),
+                            &input_device.path,
                             Arc::clone(&self.cleaning_signal),
                         ) {
                             Ok(()) => {
@@ -100,25 +99,23 @@ impl Application {
                                 eprintln!("{error}");
                             }
                         }
+                    } else if user_in_input_group() {
+                        eprintln!(
+                            "User is in group 'input' but cannot open device. Check device permissions, re-login, or udev rules."
+                        );
                     } else {
-                        if user_in_input_group() {
-                            eprintln!(
-                                "User is in group 'input' but cannot open device. Check device permissions, re-login, or udev rules."
-                            );
-                        } else {
-                            match karen::builder()
-                                .wrapper("pkexec")
-                                .with_env(&[
-                                    "DISPLAY",
-                                    "WAYLAND_",
-                                    "XAUTHORITY",
-                                    "DBUS_SESSION_BUS_ADDRESS",
-                                    "XDG_RUNTIME_DIR",
-                                ])
-                            {
-                                Ok(_running_as) => {}
-                                Err(err) => eprintln!("Failed to escalate privileges: {err}"),
-                            }
+                        match karen::builder()
+                            .wrapper("pkexec")
+                            .with_env(&[
+                                "DISPLAY",
+                                "WAYLAND_",
+                                "XAUTHORITY",
+                                "DBUS_SESSION_BUS_ADDRESS",
+                                "XDG_RUNTIME_DIR",
+                            ])
+                        {
+                            Ok(_running_as) => {}
+                            Err(err) => eprintln!("Failed to escalate privileges: {err}"),
                         }
                     }
                 }
