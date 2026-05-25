@@ -129,14 +129,16 @@ mod platform {
     pub fn has_device_access(_path: &Path) -> bool { true }
 
     pub fn discover_keyboards() -> Vec<InputDevice> {
-        use windows::Win32::UI::Input::RawInput::{GetRawInputDeviceList, GetRawInputDeviceInfoW, RAWINPUTDEVICELIST, RIDI_DEVICENAME, RIM_TYPEKEYBOARD};
+        use winapi::um::winuser::{GetRawInputDeviceList, GetRawInputDeviceInfoW, RAWINPUTDEVICELIST, RIDI_DEVICENAME, RIM_TYPEKEYBOARD};
+        use winapi::shared::minwindef::UINT;
+        use winapi::shared::windef::HANDLE;
 
         let mut keyboards: Vec<InputDevice> = Vec::new();
 
         unsafe {
-            let mut count: u32 = 0;
+            let mut count: UINT = 0;
             // first call to get required count
-            let _ = GetRawInputDeviceList(std::ptr::null_mut(), &mut count, std::mem::size_of::<RAWINPUTDEVICELIST>() as u32);
+            let _ = GetRawInputDeviceList(std::ptr::null_mut(), &mut count, std::mem::size_of::<RAWINPUTDEVICELIST>() as UINT);
             if count == 0 {
                 return vec![InputDevice { name: String::from("No keyboard detected"), path: PathBuf::new() }];
             }
@@ -144,7 +146,7 @@ mod platform {
             let mut list: Vec<RAWINPUTDEVICELIST> = Vec::with_capacity(count as usize);
             list.set_len(count as usize);
 
-            let got = GetRawInputDeviceList(list.as_mut_ptr(), &mut count, std::mem::size_of::<RAWINPUTDEVICELIST>() as u32);
+            let got = GetRawInputDeviceList(list.as_mut_ptr(), &mut count, std::mem::size_of::<RAWINPUTDEVICELIST>() as UINT);
             if got == u32::MAX {
                 return vec![InputDevice { name: String::from("No keyboard detected"), path: PathBuf::new() }];
             }
@@ -152,16 +154,16 @@ mod platform {
             for rid in &list {
                 // dwType: 1 == RIM_TYPEKEYBOARD
                 if rid.dwType == RIM_TYPEKEYBOARD as u32 {
-                    // query name size
-                    let mut name_len: u32 = 0;
-                    let ret = GetRawInputDeviceInfoW(rid.hDevice, RIDI_DEVICENAME, std::ptr::null_mut(), &mut name_len);
+                    // query name size (in TCHARs)
+                    let mut name_len: UINT = 0;
+                    let ret = GetRawInputDeviceInfoW(rid.hDevice as HANDLE, RIDI_DEVICENAME, std::ptr::null_mut(), &mut name_len);
                     if ret == u32::MAX || name_len == 0 {
                         continue;
                     }
 
                     // allocate buffer for wide chars
                     let mut buf: Vec<u16> = vec![0u16; name_len as usize + 1];
-                    let ret2 = GetRawInputDeviceInfoW(rid.hDevice, RIDI_DEVICENAME, buf.as_mut_ptr() as *mut _, &mut name_len);
+                    let ret2 = GetRawInputDeviceInfoW(rid.hDevice as HANDLE, RIDI_DEVICENAME, buf.as_mut_ptr() as *mut _, &mut name_len);
                     if ret2 == u32::MAX {
                         continue;
                     }
@@ -172,7 +174,8 @@ mod platform {
                     }
                     let name = String::from_utf16_lossy(&buf);
 
-                    keyboards.push(InputDevice { name, path: PathBuf::from("") });
+                    // Use the device name as a stable identifier in `path`
+                    keyboards.push(InputDevice { name: name.clone(), path: PathBuf::from(name) });
                 }
             }
         }
