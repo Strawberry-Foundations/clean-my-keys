@@ -205,11 +205,11 @@ impl Application {
                 icon(keyboard_icon).size(32.0).color(icon_color),
                 text(description).size(14.0)
             ]
-                .spacing(8.0)
+                .spacing(12.0)
                 .align_y(Alignment::Center),
         )
         .style(|_| container_style())
-        .padding(9.0)
+        .padding(12.0)
         .width(550)
         .max_width(550);
 
