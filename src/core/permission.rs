@@ -34,6 +34,8 @@ fn accessible_input_devices() -> Vec<PathBuf> {
     devices
 }
 
+/// # Errors
+/// Returns an error if no accessible input devices are found, indicating that the application likely lacks necessary permissions.
 pub fn ensure_input_permissions() -> Result<(), Box<dyn Error>> {
     if !accessible_input_devices().is_empty() {
         return Ok(());
