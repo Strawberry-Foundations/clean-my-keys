@@ -115,19 +115,7 @@ impl Application {
                     } else if user_in_input_group() {
                         log("User is in group 'input' but cannot open device. Check device permissions, re-login, or udev rules.");
                     } else {
-                        match karen::builder()
-                            .wrapper("pkexec")
-                            .with_env(&[
-                                "DISPLAY",
-                                "WAYLAND_",
-                                "XAUTHORITY",
-                                "DBUS_SESSION_BUS_ADDRESS",
-                                "XDG_RUNTIME_DIR",
-                            ])
-                        {
-                            Ok(_running_as) => {}
-                            Err(err) => log(format!("Failed to escalate privileges: {err}")),
-                        }
+                        log("Insufficient permissions to open device. Application attempted escalation at startup; please run with appropriate permissions or configure udev rules.");
                     }
                 }
                 Task::none()
