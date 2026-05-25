@@ -1,7 +1,7 @@
 use std::error::Error;
 #[cfg(target_os = "linux")]
 mod linux_permission {
-    use super::*;
+    use super::Error;
     use std::fs;
     use std::path::PathBuf;
     use std::process::Command;
@@ -89,6 +89,7 @@ pub fn user_in_input_group() -> bool {
     return windows_permission::user_in_input_group();
 }
 
+#[must_use] 
 pub fn accessible_input_devices() -> Vec<std::path::PathBuf> {
     #[cfg(target_os = "linux")]
     return linux_permission::accessible_input_devices();
