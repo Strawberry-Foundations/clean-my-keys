@@ -219,20 +219,24 @@ impl Application {
 
             description_container,
 
-            row![
-                row![icon(ICON_USB), text("Input Device")]
-                    .align_y(Alignment::Center)
-                    .spacing(4.0),
-                pick_list(
-                    input_devices,
-                    self.input_device.as_ref(),
-                    Message::ChangeInputDevice
-                )
-                .placeholder("None")
-                .style(pick_list_style)
-            ]
-            .align_y(Alignment::Center)
-            .spacing(16.0),
+            container(
+                row![
+                    row![
+                        icon(ICON_USB), text("Input Device")
+                    ]
+                        .align_y(Alignment::Center)
+                        .spacing(4.0),
+                    pick_list(
+                        input_devices,
+                        self.input_device.as_ref(),
+                        Message::ChangeInputDevice
+                    )
+                    .placeholder("None")
+                    .style(pick_list_style)
+                ]
+                .align_y(Alignment::Center)
+                .spacing(16.0),
+            ).max_width(500),
 
             {
                 if self.input_device.as_ref().is_some_and(|device| !device.path.as_os_str().is_empty()) {
