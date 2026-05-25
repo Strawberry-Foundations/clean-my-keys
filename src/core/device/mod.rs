@@ -129,7 +129,59 @@ mod platform {
     pub fn has_device_access(_path: &Path) -> bool { true }
 
     pub fn discover_keyboards() -> Vec<InputDevice> {
-        vec![InputDevice { name: String::from("Default keyboard (Windows)"), path: PathBuf::new() }]
+        use windows::Win32::UI::Input::RawInput::{GetRawInputDeviceList, GetRawInputDeviceInfoW, RAWINPUTDEVICELIST, RIDI_DEVICENAME, RIM_TYPEKEYBOARD};
+
+        let mut keyboards: Vec<InputDevice> = Vec::new();
+
+        unsafe {
+            let mut count: u32 = 0;
+            // first call to get required count
+            let _ = GetRawInputDeviceList(std::ptr::null_mut(), &mut count, std::mem::size_of::<RAWINPUTDEVICELIST>() as u32);
+            if count == 0 {
+                return vec![InputDevice { name: String::from("No keyboard detected"), path: PathBuf::new() }];
+            }
+
+            let mut list: Vec<RAWINPUTDEVICELIST> = Vec::with_capacity(count as usize);
+            list.set_len(count as usize);
+
+            let got = GetRawInputDeviceList(list.as_mut_ptr(), &mut count, std::mem::size_of::<RAWINPUTDEVICELIST>() as u32);
+            if got == u32::MAX {
+                return vec![InputDevice { name: String::from("No keyboard detected"), path: PathBuf::new() }];
+            }
+
+            for rid in &list {
+                // dwType: 1 == RIM_TYPEKEYBOARD
+                if rid.dwType == RIM_TYPEKEYBOARD as u32 {
+                    // query name size
+                    let mut name_len: u32 = 0;
+                    let ret = GetRawInputDeviceInfoW(rid.hDevice, RIDI_DEVICENAME, std::ptr::null_mut(), &mut name_len);
+                    if ret == u32::MAX || name_len == 0 {
+                        continue;
+                    }
+
+                    // allocate buffer for wide chars
+                    let mut buf: Vec<u16> = vec![0u16; name_len as usize + 1];
+                    let ret2 = GetRawInputDeviceInfoW(rid.hDevice, RIDI_DEVICENAME, buf.as_mut_ptr() as *mut _, &mut name_len);
+                    if ret2 == u32::MAX {
+                        continue;
+                    }
+
+                    // trim trailing zeros and convert
+                    if let Some(pos) = buf.iter().position(|&c| c == 0) {
+                        buf.truncate(pos);
+                    }
+                    let name = String::from_utf16_lossy(&buf);
+
+                    keyboards.push(InputDevice { name, path: PathBuf::from("") });
+                }
+            }
+        }
+
+        if keyboards.is_empty() {
+            keyboards.push(InputDevice { name: String::from("No keyboard detected"), path: PathBuf::new() });
+        }
+
+        keyboards
     }
 
     extern "system" fn low_level_keyboard_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
@@ -153,7 +205,7 @@ mod platform {
                 let _thread_id = GetCurrentThreadId();
                 let hook_res = SetWindowsHookExW(WH_KEYBOARD_LL, Some(low_level_keyboard_proc), None, 0);
                 match hook_res {
-                    Ok(hhook) => { hook_ptr.store(hhook.0); }
+                    Ok(hhook) => { hook_ptr.store(hhook.0 as *mut c_void, Ordering::SeqCst); }
                     Err(_) => { return; }
                 }
 
@@ -166,11 +218,11 @@ mod platform {
                     thread::sleep(Duration::from_millis(10));
                 }
 
-                let hptr = hook_ptr.load();
+                let hptr = hook_ptr.load(Ordering::SeqCst);
                 if !hptr.is_null() {
-                    let h = HHOOK(hptr);
+                    let h = HHOOK(hptr as isize);
                     let _ = UnhookWindowsHookEx(h);
-                    hook_ptr.store(std::ptr::null_mut());
+                    hook_ptr.store(std::ptr::null_mut(), Ordering::SeqCst);
                 }
             }
         });
