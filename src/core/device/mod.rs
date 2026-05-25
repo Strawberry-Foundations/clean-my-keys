@@ -131,7 +131,7 @@ mod platform {
     pub fn discover_keyboards() -> Vec<InputDevice> {
         use winapi::um::winuser::{GetRawInputDeviceList, GetRawInputDeviceInfoW, RAWINPUTDEVICELIST, RIDI_DEVICENAME, RIM_TYPEKEYBOARD};
         use winapi::shared::minwindef::UINT;
-        use winapi::shared::windef::HANDLE;
+        use winapi::shared::ntdef::HANDLE;
 
         let mut keyboards: Vec<InputDevice> = Vec::new();
 
