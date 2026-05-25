@@ -58,27 +58,6 @@ mod linux_permission {
     }
 }
 
-#[cfg(target_os = "windows")]
-mod windows_permission {
-    use super::*;
-
-    #[must_use]
-    pub fn user_in_input_group() -> bool {
-        // Concept of 'input' group does not apply on Windows - assume allowed.
-        true
-    }
-
-    pub fn accessible_input_devices() -> Vec<std::path::PathBuf> {
-        // Device access model differs on Windows; return empty to trigger no escalation.
-        Vec::new()
-    }
-
-    pub fn ensure_input_permissions() -> Result<(), Box<dyn Error>> {
-        // No-op on Windows.
-        Ok(())
-    }
-}
-
 // Public wrappers
 #[must_use]
 pub fn user_in_input_group() -> bool {
@@ -86,7 +65,7 @@ pub fn user_in_input_group() -> bool {
     return linux_permission::user_in_input_group();
 
     #[cfg(target_os = "windows")]
-    return windows_permission::user_in_input_group();
+    return true;
 }
 
 #[must_use] 
@@ -95,7 +74,7 @@ pub fn accessible_input_devices() -> Vec<std::path::PathBuf> {
     return linux_permission::accessible_input_devices();
 
     #[cfg(target_os = "windows")]
-    return windows_permission::accessible_input_devices();
+    return Vec::new();
 }
 
 /// # Errors
@@ -104,5 +83,5 @@ pub fn ensure_input_permissions() -> Result<(), Box<dyn Error>> {
     return linux_permission::ensure_input_permissions();
 
     #[cfg(target_os = "windows")]
-    return windows_permission::ensure_input_permissions();
+    return Ok(());
 }

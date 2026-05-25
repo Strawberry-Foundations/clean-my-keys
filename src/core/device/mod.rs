@@ -76,6 +76,8 @@ mod platform {
         keyboards
     }
 
+    /// # Errors
+    /// Returns an error if the device cannot be opened or configured for grabbing, or if grabbing fails after multiple attempts (e.g. due to another process holding it).
     pub fn start_keyboard_lock(device_path: &Path, is_running: Arc<AtomicBool>) -> Result<(), String> {
         let mut device = Device::open(device_path).map_err(|error| format!("Could not open device: {error}"))?;
 
