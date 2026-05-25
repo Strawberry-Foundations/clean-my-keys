@@ -220,7 +220,7 @@ mod platform {
 
                 let hptr = hook_ptr.load(Ordering::SeqCst);
                 if !hptr.is_null() {
-                    let h = HHOOK(hptr as isize);
+                    let h = HHOOK(hptr);
                     let _ = UnhookWindowsHookEx(h);
                     hook_ptr.store(std::ptr::null_mut(), Ordering::SeqCst);
                 }
