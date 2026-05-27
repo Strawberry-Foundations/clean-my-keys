@@ -7,6 +7,11 @@ edition = "2024"
 iced = "0.14.0"
 image = "0.25.10"
 
+[profile.release]
+opt-level = 'z'
+strip = true
+lto = true
+
 [target.'cfg(target_os = "linux")'.dependencies]
 evdev = "0.13.2"
 karen = "0.1.2"
